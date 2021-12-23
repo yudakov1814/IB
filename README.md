@@ -10,9 +10,14 @@ Create virtual environment
   python3 -m venv venv
 ```
 
-Activate virtual environment
+Activate virtual environment (MacOS, linux)
 ```bash
   source venv/bin/activate
+```
+
+Activate virtual environment (windows)
+```bash
+  venv\Scripts\activate
 ```
 
 Install pip requirements
@@ -38,7 +43,9 @@ CDM (windows)
 
 Powershell (windows)
 ```powershell
-  $env:FLASK_ENV = "main"
+  $env:FLASK_APP = "main"
   $env:FLASK_ENV = "development"
   flask run
 ```
+
+Open http://localhost:5000/

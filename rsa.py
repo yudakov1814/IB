@@ -1,8 +1,6 @@
 import typing
 import random
 
-from miller_rabin import miller_rabin
-
 
 EXPONENT = 65537
 
@@ -100,9 +98,34 @@ def get_prime(nbits: int) -> int:
             return integer
 
 
+def miller_rabin(n, k=10):
+    if n == 2:
+        return True
+
+    if n % 2 == 0:
+        return False
+
+    r, s = 0, n - 1
+    while s % 2 == 0:
+        r += 1
+        s //= 2
+    for _ in range(k):
+        a = random.randrange(2, n - 1)
+        x = pow(a, s, n)
+        if x == 1 or x == n - 1:
+            continue
+        for _ in range(r - 1):
+            x = pow(x, 2, n)
+            if x == n - 1:
+                break
+        else:
+            return False
+    return True
+
+
 # tests
 session_key = 1234567890
-for nbits in (128, 192, 256, 512, 1024, 2048):
+for nbits in (128, 192, 256, 512, 1024):
     public_key, private_key = new_keys(nbits)
     encrypt_msg = encrypt(session_key, public_key)
     decrypt_msg = decrypt(encrypt_msg, private_key)
