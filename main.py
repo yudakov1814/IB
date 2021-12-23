@@ -21,3 +21,7 @@ def hello_world():
         "encrypt": encrypt,
         "decrypt": decrypt,
     }
+
+@app.route("/api/mirror")
+def hello_world(msg):
+    return msg
