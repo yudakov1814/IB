@@ -97,7 +97,7 @@ class CipherAES:
         return chunk
 
     def decrypt(self, msg: list) -> str:
-        chunk_size = 16     # byte
+        chunk_size = 16 # byte
         msg_len = len(msg)
         if msg_len % chunk_size != 0:
             raise ValueError(
@@ -105,7 +105,7 @@ class CipherAES:
             )
 
         chunks = [
-            bytearray(msg[i: i + chunk_size]) for i in range(0, msg_len, chunk_size)
+            bytearray(msg[i : i + chunk_size]) for i in range(0, msg_len, chunk_size)
         ]
 
         return (
