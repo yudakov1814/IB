@@ -29,10 +29,13 @@ def eval_msg() -> dict:
         hsh = request.form['hash']
         decrypted_message = cipher.decrypt(msg)
         hashed_message = hash_func(decrypted_message)
-        solved = eval(decrypted_message)
-        message = cipher.encrypt(str(solved))
-        if hashed_message != hsh:
-            message = 'Integrity Error!'
+        try:
+            solved = eval(decrypted_message)
+            message = cipher.encrypt(str(solved))
+            if hashed_message != hsh:
+                message = 'Integrity Error!'
+        except (ValueError, SyntaxError):
+            message = 'Error!'
         return {
             'hash': hashed_message,
             'message': message
@@ -42,8 +45,13 @@ def eval_msg() -> dict:
 def mock_eval_msg(msg: str, hsh: str) -> dict:
     decrypted_message = cipher.decrypt(msg)
     hashed_message = hash_func(decrypted_message)
-    solved = eval(decrypted_message)
-    message = cipher.encrypt(str(solved))
+    try:
+        solved = eval(decrypted_message)
+        message = cipher.encrypt(str(solved))
+        if hashed_message != hsh:
+            message = 'Integrity Error!'
+    except (ValueError, SyntaxError):
+        message = 'Error!'
     if hashed_message != hsh:
         message = 'Integrity Error!'
     return {
@@ -72,7 +80,8 @@ def test():
     test_messages = ['2',
                      '2 * 2',
                      '3 / 2',
-                     '(1 + 2 * 3)/22 + 10*1.287']
+                     '(1 + 2 * 3)/22 + 10*1.287',
+                     'Не выражение']
 
     test_hashes = [hash_func(message) for message in test_messages]
     dictionary = dict(zip(test_messages, test_hashes))
@@ -81,7 +90,10 @@ def test():
         print(f'1)sent message was {msg}\n2)sent hash was {hsh}')
         msg = cipher.encrypt(msg)
         dictionary = mock_eval_msg(msg, hsh)
-        recieved_message = cipher.decrypt(dictionary['message'])
+        if dictionary['message'] != 'Error!':
+            recieved_message = cipher.decrypt(dictionary['message'])
+        else:
+            recieved_message = 'Error!'
         recieved_hash = dictionary['hash']
         print(f'3)recieved message is {recieved_message}\n4)recieved hash is {recieved_hash}')
         print('--------------------------------------------------------------------------------')
