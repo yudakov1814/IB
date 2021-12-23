@@ -1,59 +1,52 @@
-from typing import Dict
-
 import rsa
 import aes
 import hashlib
-from sys import getsizeof
 
 from flask import Flask, request
 
 app = Flask(__name__)
 
 TEST_KEY = 3480299736719771887772948464190228533233280192811212880921  # 192 bits
-session_key = int
-private_key = rsa.PrivateKey
-cipher = aes.CipherAES
+private_key: rsa.PrivateKey
+cipher: aes.CipherAES
 
 
 @app.route("/api/set_session_key")
-def set_session_key(key: int) -> None:
-    global session_key, cipher
-    session_key = rsa.decrypt(key, private_key)
-    cipher = aes.CipherAES(session_key)
+def set_session_key(key: int) -> str:
+    try:
+        global cipher
+        session_key = rsa.decrypt(key, private_key)
+        cipher = aes.CipherAES(session_key)
+    except Exception:
+        return 'Error'
+    return 'Session key set successfully'
 
 
-@app.route('/api/eval_msg', methods=['POST'])
-def eval_msg() -> dict:
+@app.route('/api/request_msg', methods=['POST'])
+def request_msg(msg: str, hsh: str) -> dict:
     if request.method == ['POST']:
-        msg = request.form['message']
-        hsh = request.form['hash']
+        message = request.form['message']
+        hash = request.form['hash']
+        return eval_msg(message, hash)
+
+
+def eval_msg(msg: str, hsh: str) -> dict:
+    try:
         decrypted_message = cipher.decrypt(msg)
-        hashed_message = hash_func(decrypted_message)
-        try:
-            solved = eval(decrypted_message)
-            message = cipher.encrypt(str(solved))
-            if hashed_message != hsh:
-                message = 'Integrity Error!'
-        except (ValueError, SyntaxError):
-            message = 'Error!'
+        solved = eval(decrypted_message)
+    except (ValueError, SyntaxError, NameError):
+        message = 'Error!'
+        hashed_message = hash_func(message)
+        message = cipher.encrypt(message)
         return {
             'hash': hashed_message,
             'message': message
         }
 
-
-def mock_eval_msg(msg: str, hsh: str) -> dict:
-    decrypted_message = cipher.decrypt(msg)
+    message = cipher.encrypt(str(solved))
     hashed_message = hash_func(decrypted_message)
-    try:
-        solved = eval(decrypted_message)
-        message = cipher.encrypt(str(solved))
-        if hashed_message != hsh:
-            message = 'Integrity Error!'
-    except (ValueError, SyntaxError):
-        message = 'Error!'
     if hashed_message != hsh:
-        message = 'Integrity Error!'
+        message = 'Error!'
     return {
         'hash': hashed_message,
         'message': message
@@ -72,36 +65,30 @@ def hash_func(msg: str):
     return str(result.hexdigest())
 
 
-def test():
-    test_public_key = get_public_key(512)
-    encrypted_key = rsa.encrypt(TEST_KEY, test_public_key)
+def test(input, expected):
+    encrypted_key = rsa.encrypt(TEST_KEY, get_public_key(512))
     set_session_key(encrypted_key)
 
-    test_messages = ['2',
-                     '2 * 2',
-                     '3 / 2',
-                     '(1 + 2 * 3)/22 + 10*1.287',
-                     'Не выражение']
+    print(f'sent message is {input}')
 
-    test_hashes = [hash_func(message) for message in test_messages]
-    dictionary = dict(zip(test_messages, test_hashes))
+    hsh = hash_func(input)
+    msg = cipher.encrypt(input)
 
-    for msg, hsh in dictionary.items():
-        print(f'1)sent message was {msg}\n2)sent hash was {hsh}')
-        msg = cipher.encrypt(msg)
-        dictionary = mock_eval_msg(msg, hsh)
-        if dictionary['message'] != 'Error!':
-            recieved_message = cipher.decrypt(dictionary['message'])
-        else:
-            recieved_message = 'Error!'
-        recieved_hash = dictionary['hash']
-        print(f'3)recieved message is {recieved_message}\n4)recieved hash is {recieved_hash}')
-        print('--------------------------------------------------------------------------------')
-        assert(hsh == recieved_hash)
+    print(f'hash is {hsh}\nencrypted message is {msg}')
+
+    dictionary = eval_msg(msg, hsh)
+    recieved_enc_message = dictionary['message']
+    recieved_hash = dictionary['hash']
+    recieved_message = cipher.decrypt(recieved_enc_message)
+    print('--------------------------------------------------------------------------------------------------------')
+    print(f'recieved hash is {recieved_hash}\n'
+          f'recieved message is {recieved_message}\n')
+
+    assert((recieved_message == str(expected)) & (hsh == recieved_hash))
 
 
 if __name__ == '__main__':
-    test()
+    test('1 + 2 * 3', '7')
     app.run(debug=True)
 
 
