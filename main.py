@@ -23,5 +23,5 @@ def hello_world():
     }
 
 @app.route("/api/mirror")
-def hello_world(msg):
+def mirror(msg):
     return msg
