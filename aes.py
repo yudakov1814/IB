@@ -67,7 +67,7 @@ class CipherAES:
     def encrypt(self, msg: str) -> list:
         msg = msg.encode("utf8")
 
-        chunk_size = 16 # byte
+        chunk_size = 16  # byte
         msg_len = len(msg)
         empty_len = (chunk_size - msg_len % chunk_size) % chunk_size
         msg = msg + bytes((0 for i in range(empty_len)))
@@ -97,7 +97,7 @@ class CipherAES:
         return chunk
 
     def decrypt(self, msg: list) -> str:
-        chunk_size = 16     # byte
+        chunk_size = 16  # byte
         msg_len = len(msg)
         if msg_len % chunk_size != 0:
             raise ValueError(
@@ -105,7 +105,7 @@ class CipherAES:
             )
 
         chunks = [
-            bytearray(msg[i: i + chunk_size]) for i in range(0, msg_len, chunk_size)
+            bytearray(msg[i : i + chunk_size]) for i in range(0, msg_len, chunk_size)
         ]
 
         return (

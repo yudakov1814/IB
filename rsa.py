@@ -129,5 +129,5 @@ for nbits in (128, 192, 256, 512, 1024):
     public_key, private_key = new_keys(nbits)
     encrypt_msg = encrypt(session_key, public_key)
     decrypt_msg = decrypt(encrypt_msg, private_key)
-    assert(encrypt_msg != session_key)
-    assert(decrypt_msg == session_key)
+    assert encrypt_msg != session_key
+    assert decrypt_msg == session_key
