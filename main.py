@@ -81,7 +81,7 @@ def test(input, expected):
 if __name__ == "__main__":
     test("1 + 2 * 3", "7")
     test("1//////3", "invalid syntax (<string>, line 1)")
-    test("ошибка", "name 'ошибка' is not defined")
+    test("error", "name 'error' is not defined")
     app.run(debug=True)
 
 
