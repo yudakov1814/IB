@@ -23,7 +23,7 @@ def set_session_key(key: int) -> str:
 
 
 @app.route('/api/request_msg', methods=['POST'])
-def request_msg(msg: str, hsh: str) -> dict:
+def request_msg() -> dict:
     if request.method == ['POST']:
         message = request.form['message']
         hash = request.form['hash']
@@ -33,23 +33,15 @@ def request_msg(msg: str, hsh: str) -> dict:
 def eval_msg(msg: str, hsh: str) -> dict:
     try:
         decrypted_message = cipher.decrypt(msg)
-        solved = eval(decrypted_message)
-    except (ValueError, SyntaxError, NameError):
+        if hash_func(decrypted_message) != hsh:
+            raise ValueError("hash functions don't match")
+        message = str(eval(decrypted_message))
+    except Exception:
         message = 'Error!'
-        hashed_message = hash_func(message)
-        message = cipher.encrypt(message)
-        return {
-            'hash': hashed_message,
-            'message': message
-        }
 
-    message = cipher.encrypt(str(solved))
-    hashed_message = hash_func(decrypted_message)
-    if hashed_message != hsh:
-        message = 'Error!'
     return {
-        'hash': hashed_message,
-        'message': message
+        'hash': hash_func(message),
+        'message': cipher.encrypt(message),
     }
 
 
@@ -84,11 +76,13 @@ def test(input, expected):
     print(f'recieved hash is {recieved_hash}\n'
           f'recieved message is {recieved_message}\n')
 
-    assert((recieved_message == str(expected)) & (hsh == recieved_hash))
+    assert((recieved_message == expected) & (hash_func(recieved_message) == recieved_hash))
 
 
 if __name__ == '__main__':
     test('1 + 2 * 3', '7')
+    test('1///3', expected='Error!')
+    test('ошибка', expected='Error!')
     app.run(debug=True)
 
 
