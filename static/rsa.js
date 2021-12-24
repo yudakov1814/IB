@@ -1,4 +1,4 @@
-function encrypt(msg, n, e) {
+function rsa_encrypt(msg, n, e) {
     result = 1n;
     bigMsg = BigInt(msg);
     bigN = BigInt(n);

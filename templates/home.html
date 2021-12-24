@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Client</title>
+</head>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="{{url_for('static', filename='aes.js')}}"></script>
+<script src="{{url_for('static', filename='rsa.js')}}"></script>
+<script src="{{url_for('static', filename='sha256.js')}}"></script>
+
+<body>
+    <section class="jumbotron text-center mb-5">
+        <div class="container">
+            <h1 class="jumbotron-heading">Наше классное приложение</h1>
+            <p class="lead text-muted">Для защищенного соединения между клиентом и сервером</p>
+        </div>
+    </section>
+
+    <div class="container mb-5">
+        <div class="col-2 m-auto mb-2">
+            <label for="aes-nbit" class="col-form-label">Размер ключа AES</label>
+            <select id="aes-nbit" class="form-select">
+                <option value="128" selected>128</option>
+                <option value="192">192</option>
+                <option value="256">256</option>
+            </select>
+        </div>
+        <div class="col-2 m-auto mb-2">
+            <label for="rsa-nbit" class="col-form-label">Размер ключа RSA</label>
+            <select id="rsa-nbit" class="form-select">
+                <option value="512" selected>512</option>
+                <option value="1024">1024</option>
+                <option value="2048">2048</option>
+            </select>
+        </div>
+
+        <div class="col-2 m-auto">
+            <button id="connect-btn" type="button" class="btn btn-primary mt-3" onclick="connect()">
+                Подключиться к серверу
+            </button>
+        </div>
+    </div>
+
+    <div class="container mb-5">
+        <div class="col-4 m-auto mb-2">
+            <label for="aes-nbits" class="col-form-label">Введите ваше сообщение серверу</label>
+            <input type="text" class="form-control" id="message" placeholder="Ваше сообщение" disabled>
+        </div>
+
+        <div class="col-1 m-auto">
+            <button id="message-btn" type="button" class="btn btn-primary mt-3" disabled onclick="send()">
+                Отправить
+            </button>
+        </div>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Отправленное сообщение</th>
+                <th scope="col">Отправленное сообщение после шифровки</th>
+                <th scope="col">Полученное сообщение</th>
+                <th scope="col">Полученное сообщение после расшифровки</th>
+            </tr>
+        </thead>
+        <tbody id="history">
+        </tbody>
+    </table>
+</body>
+
+</html>
+
+<script>
+    var cipher = null;
+
+    function addRow(msg1, msg2, msg3, msg4) {
+        msg1 = cut(msg1);
+        msg2 = cut(msg2);
+        msg3 = cut(msg3);
+        msg4 = cut(msg4);
+
+        const td1 = document.createElement('td');
+        td1.innerText = msg1;
+
+        const td2 = document.createElement('td');
+        td2.innerText = msg2;
+
+        const td3 = document.createElement('td');
+        td3.innerText = msg3;
+
+        const td4 = document.createElement('td');
+        td4.innerText = msg4;
+
+        const tr = document.createElement('tr');
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tr.appendChild(td3);
+        tr.appendChild(td4);
+
+        const history = document.getElementById('history');
+        if (history.childNodes.length == 0) {
+            history.appendChild(tr);
+        } else {
+            history.insertBefore(tr, history.firstChild);
+        }
+        
+    }
+
+    function cut(value) {
+        const max_len = 60;
+        value = String(value);
+
+        if (value.length > max_len - 3) {
+
+            value = value.substring(0, max_len - 3);
+            value = `${value}...`;
+        }
+
+        return value
+    }
+
+    function send() {
+        const message = $('#message').val();
+
+        const encrypt_message = cipher.encrypt(message);
+        const hashed_message = sha256(message);
+
+        console.log('message', message);
+        console.log('encrypt_message', encrypt_message);
+        console.log('hashed_message', hashed_message);
+
+        $.ajax({
+            url: '/api/request_msg',
+            method: 'POST',
+            dataType: 'json',
+            data: {
+                message: JSON.stringify(encrypt_message),
+                hash: hashed_message,
+            },
+            success: function (result) {
+                console.log('/api/request_msg', result);
+
+                const decrypt_message = cipher.decrypt(result.message)
+                console.log('decrypt_message', decrypt_message);
+
+                addRow(message, encrypt_message, result.message, decrypt_message);
+
+                if (sha256(result_msg) != result.hash) {
+                    alert('bad hash :(');
+                }
+            },
+            error: function (jqXHR, exception) {
+                console.log(jqXHR);
+                console.log(exception);
+            }
+        });
+    }
+
+    function connect() {
+        const aesNbit = Number($('#aes-nbit').val());
+        const rsaNbit = Number($('#rsa-nbit').val());
+
+        $.ajax({
+            type: 'GET',
+            url: '/api/get_public_key/' + rsaNbit,
+            success: function (response) {
+                console.log('/api/get_public_key/', response);
+                const session_key = get_session_key(aesNbit);
+
+                const encrypt_message = rsa_encrypt(
+                    session_key,
+                    response.public_key.n,
+                    response.public_key.e,
+                );
+                const hashed_message = sha256(session_key);
+                $.ajax({
+                    url: '/api/set_session_key',
+                    method: 'POST',
+                    dataType: 'json',
+                    data: {
+                        message: encrypt_message,
+                        hash: hashed_message,
+                    },
+                    success: function (result) {
+                        console.log('/api/set_session_key', result);
+                        cipher = new CipherAES(session_key);
+
+                        const result_msg = cipher.decrypt(result.message)
+                        console.log('result_msg', result_msg);
+
+                        if (sha256(result_msg) == result.hash) {
+                            if (result_msg == 'ok') {
+                                document.getElementById('aes-nbit').disabled = true;
+                                document.getElementById('rsa-nbit').disabled = true;
+                                document.getElementById('connect-btn').disabled = true;
+                                document.getElementById('message').disabled = false;
+                                document.getElementById('message-btn').disabled = false;
+
+                                console.log(encrypt_message)
+                                console.log(result.message)
+
+                                addRow(session_key, encrypt_message, result.message, result_msg)
+                            } else {
+                                alert(result_msg)
+                            }
+                        }
+                    },
+                    error: function (jqXHR, exception) {
+                        console.log(jqXHR);
+                        console.log(exception);
+                    }
+                });
+            },
+            error: function (jqXHR, exception) {
+                console.log(jqXHR);
+                console.log(exception);
+            }
+        });
+    }
+</script>

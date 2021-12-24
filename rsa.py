@@ -10,6 +10,14 @@ class PublicKey:
         self.n = n
         self.e = e
 
+    def to_dict(self) -> dict:
+        return {
+            "public_key": {
+                "n": str(self.n),
+                "e": str(self.e),
+            }
+        }
+
 
 class PrivateKey:
     def __init__(self, n: int, d: int) -> None:
