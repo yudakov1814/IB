@@ -18,7 +18,7 @@ def set_session_key(key: int) -> str:
         session_key = rsa.decrypt(key, private_key)
         cipher = aes.CipherAES(session_key)
     except Exception:
-        return 'Error'
+        return 'Error!'
     return 'Session key set successfully'
 
 
@@ -36,8 +36,8 @@ def eval_msg(msg: str, hsh: str) -> dict:
         if hash_func(decrypted_message) != hsh:
             raise ValueError("hash functions don't match")
         message = str(eval(decrypted_message))
-    except Exception:
-        message = 'Error!'
+    except Exception as e:
+        message = str(e)
 
     return {
         'hash': hash_func(message),
@@ -81,8 +81,10 @@ def test(input, expected):
 
 if __name__ == '__main__':
     test('1 + 2 * 3', '7')
-    test('1///3', expected='Error!')
-    test('ошибка', expected='Error!')
+    test('1//////3', expected='invalid syntax (<string>, line 1)')
+    input = "ошибка"
+    expected = f"name '{input}' is not defined"
+    test(input, expected=expected)
     app.run(debug=True)
 
 
