@@ -1,10 +1,9 @@
 import rsa
 import aes
 
-from flask import Flask
+from flask import Flask, render_template
 
 app = Flask(__name__)
-
 
 TEST_KEY = 3480299736719771887772948464190228533233280192811212880921  # 192 bits
 
@@ -22,6 +21,16 @@ def hello_world():
         "decrypt": decrypt,
     }
 
-@app.route("/api/mirror")
+
+@app.route("/api/mirror/<msg>")
 def mirror(msg):
     return msg
+
+
+@app.route("/home")
+def connect():
+    return render_template("connect.html")
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
